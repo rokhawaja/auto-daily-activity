@@ -1,0 +1,49 @@
+name: Daily Commit
+
+on:
+  # Run daily at 15:00 UTC
+  schedule:
+    - cron: '0 15 * * *'
+  
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+# Required permission to push commits back to the repo
+permissions:
+  contents: write
+
+jobs:
+  update-log:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run update script
+        run: python update_log.py
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push if changes exist
+        run: |
+          # Get current date in UTC for commit message
+          DATE=$(date -u +"%Y-%m-%d")
+          
+          # Check if there are any changes
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: daily log update ${DATE}"
+            git push
+            echo "✓ Changes committed and pushed successfully"
+          else
+            echo "ℹ No changes to commit"
+          fi
